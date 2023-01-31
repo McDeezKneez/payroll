@@ -6,6 +6,8 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.Id;
 
+// Following guide: https://spring.io/guides/tutorials/rest/
+
 @Entity // JPA annotation to make this object ready for storage in a JPA-based data store
 // Had to add the javax persistency dependency manually, see notes
 public class Employee {
