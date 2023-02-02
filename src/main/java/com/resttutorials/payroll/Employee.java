@@ -2,15 +2,19 @@ package com.resttutorials.payroll;
 
 import java.util.Objects;
 
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.Id;
 
 // Following guide: https://spring.io/guides/tutorials/rest/
 
-@Entity // JPA annotation to make this object ready for storage in a JPA-based data store
+// JPA annotation to make this object ready for storage in a JPA-based data store
 // Had to add the javax persistency dependency manually, see notes
-public class Employee {
+
+// Turns out the newest version of springboot doesnt have support for
+// javax but has support for jakarta
+@Entity
+class Employee {
 
     private @Id @GeneratedValue Long id;
     // Id - JPA annotation to indicate that it is the primary key
