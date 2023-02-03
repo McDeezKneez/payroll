@@ -6,13 +6,12 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.Id;
 
-// Following guide: https://spring.io/guides/tutorials/rest/
-
 // JPA annotation to make this object ready for storage in a JPA-based data store
 // Had to add the javax persistency dependency manually, see notes
 
 // Turns out the newest version of springboot doesnt have support for
 // javax but has support for jakarta
+// Was getting errors when running before making the change to jakarta, "Employee not a managed type"
 @Entity
 class Employee {
 
