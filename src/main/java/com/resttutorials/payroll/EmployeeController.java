@@ -1,7 +1,11 @@
 package com.resttutorials.payroll;
 
+import java.lang.reflect.Method;
 import java.util.List;
 
+import org.springframework.hateoas.EntityModel;
+import org.springframework.hateoas.Link;
+import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -17,11 +21,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 // FRONT CONTROLLER - responsible for the flow of the spring mvc application
 //   In spring web mvc, the DispatcherServlet class works as front controler
 
-
-
 @RestController
-public class EmployeeController {
-    
+class EmployeeController {
+
     private final EmployeeRepository repository;
 
     EmployeeController(EmployeeRepository repository) {
@@ -41,21 +43,33 @@ public class EmployeeController {
     @GetMapping("/employees/{id}")
     // EntityModel is a generic container from spring HATEOAS that includes
     // not only the data but a collection of links
-    EntityModel<Employee> one(@PathVariable Long id) {
+    EntityModel<Employee> one(@PathVariable Long id) throws NoSuchMethodException, SecurityException {
         Employee employee = repository.findById(id).orElseThrow(() -> new EmployeeNotFoundException(id));
 
-        return EntityModel.of(employee, 
-        linkTo(methodOn(EmployeeController.class).one(id)).withSelfRel(),
-        // ^This line asks spring hateoas to build a link to the EmployeeControllers
-        // one() method and flag it as a self link
-        linkTo(methodOn(EmployeeController.class).all()).withRel("employees"));
-        // ^This line asks spring hateoas to build a link to the aggregate root
-        // all() and call it employees
+        Method self = EmployeeController.class.getMethod("one", Long.class);
+
+        // for some reason, static imports are not working and I have to fully qualify the calls
+        return EntityModel.of(employee,
+                org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo(self, id).withSelfRel(),
+                org.springframework.hateoas.server.mvc.WebMvcLinkBuilder
+                        .linkTo(org.springframework.hateoas.server.mvc.WebMvcLinkBuilder
+                                .methodOn(EmployeeController.class).all())
+                        .withRel("employees"));
+
+        /*
+         * return EntityModel.of(employee,
+         * linkTo(methodOn(EmployeeController.class).one(id)).withSelfRel(),
+         * // ^This line asks spring hateoas to build a link to the EmployeeControllers
+         * // one() method and flag it as a self link
+         * linkTo(methodOn(EmployeeController.class).all()).withRel("employees"));
+         * // ^This line asks spring hateoas to build a link to the aggregate root
+         * // all() and call it employees
+         */
     }
-    
+
     @PutMapping("/employees/{id}")
     Employee replaceEmployee(@RequestBody Employee newEmployee, @PathVariable Long id) {
-        return repository.findById(id).map( employee -> {
+        return repository.findById(id).map(employee -> {
             employee.setName(newEmployee.getName());
             employee.setRole(newEmployee.getRole());
             return repository.save(employee);
@@ -70,4 +84,3 @@ public class EmployeeController {
         repository.deleteById(id);
     }
 }
-
