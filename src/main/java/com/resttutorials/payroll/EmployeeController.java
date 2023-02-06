@@ -1,11 +1,12 @@
 package com.resttutorials.payroll;
 
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
+
 import java.lang.reflect.Method;
 import java.util.List;
 
 import org.springframework.hateoas.EntityModel;
-import org.springframework.hateoas.Link;
-import org.springframework.hateoas.server.mvc.WebMvcLinkBuilder;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -48,13 +49,13 @@ class EmployeeController {
 
         Method self = EmployeeController.class.getMethod("one", Long.class);
 
-        // for some reason, static imports are not working and I have to fully qualify the calls
+        // for some reason, static imports are not working and I have to fully qualify
+        // the calls
+        // -- Had to modify the settings.json favorite static import section to include
+        // -- the WebMvcLinkBuilder package.
         return EntityModel.of(employee,
-                org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo(self, id).withSelfRel(),
-                org.springframework.hateoas.server.mvc.WebMvcLinkBuilder
-                        .linkTo(org.springframework.hateoas.server.mvc.WebMvcLinkBuilder
-                                .methodOn(EmployeeController.class).all())
-                        .withRel("employees"));
+                linkTo(self, id).withSelfRel(),
+                linkTo(methodOn(EmployeeController.class).all()).withRel("employees"));
 
         /*
          * return EntityModel.of(employee,
