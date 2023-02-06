@@ -5,7 +5,10 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 import java.lang.reflect.Method;
 import java.util.List;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
+import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,14 +29,25 @@ import org.springframework.web.bind.annotation.RequestBody;
 class EmployeeController {
 
     private final EmployeeRepository repository;
+    private final EmployeeModelAssembler assembler;
 
-    EmployeeController(EmployeeRepository repository) {
+    EmployeeController(EmployeeRepository repository, EmployeeModelAssembler assembler) {
         this.repository = repository;
+        this.assembler = assembler;
     }
 
+    // This method represents the employees aggregate root
     @GetMapping("/employees")
-    List<Employee> all() {
-        return repository.findAll();
+    // CollectionModel spring hateoas container aimed at encapsulating a collection of resources
+    // 
+    CollectionModel<EntityModel<Employee>> all() {
+
+        List<EntityModel<Employee>> employees = repository.findAll().stream().map(assembler::toModel)
+                .collect(Collectors.toList());
+
+        return CollectionModel.of(employees, linkTo(methodOn(EmployeeController.class).all()).withSelfRel());
+        
+        // return repository.findAll();
     }
 
     @PostMapping("/employees")
@@ -44,18 +58,22 @@ class EmployeeController {
     @GetMapping("/employees/{id}")
     // EntityModel is a generic container from spring HATEOAS that includes
     // not only the data but a collection of links
-    EntityModel<Employee> one(@PathVariable Long id) throws NoSuchMethodException, SecurityException {
+    // Had to add public because the getMethod call will only find public methods
+    public EntityModel<Employee> one(@PathVariable Long id) throws NoSuchMethodException, SecurityException {
         Employee employee = repository.findById(id).orElseThrow(() -> new EmployeeNotFoundException(id));
 
-        Method self = EmployeeController.class.getMethod("one", Long.class);
+        //Method self = EmployeeController.class.getMethod("one", Long.class);
+
+        // Below doesnt work
+        // Method self = EmployeeController.class.getEnclosingMethod();
 
         // for some reason, static imports are not working and I have to fully qualify
         // the calls
         // -- Had to modify the settings.json favorite static import section to include
         // -- the WebMvcLinkBuilder package.
-        return EntityModel.of(employee,
-                linkTo(self, id).withSelfRel(),
-                linkTo(methodOn(EmployeeController.class).all()).withRel("employees"));
+        // return EntityModel.of(employee,
+        //         linkTo(self, id).withSelfRel(),
+        //         linkTo(methodOn(EmployeeController.class).all()).withRel("employees"));
 
         /*
          * return EntityModel.of(employee,
@@ -66,6 +84,8 @@ class EmployeeController {
          * // ^This line asks spring hateoas to build a link to the aggregate root
          * // all() and call it employees
          */
+
+         return assembler.toModel(employee);
     }
 
     @PutMapping("/employees/{id}")
