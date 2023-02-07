@@ -3,13 +3,13 @@ package com.resttutorials.payroll;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
 import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
-import java.lang.reflect.Method;
 import java.util.List;
-import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.EntityModel;
+import org.springframework.hateoas.IanaLinkRelations;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -38,21 +38,30 @@ class EmployeeController {
 
     // This method represents the employees aggregate root
     @GetMapping("/employees")
-    // CollectionModel spring hateoas container aimed at encapsulating a collection of resources
-    // 
+    // CollectionModel spring hateoas container aimed at encapsulating a collection
+    // of resources
+    //
     CollectionModel<EntityModel<Employee>> all() {
 
         List<EntityModel<Employee>> employees = repository.findAll().stream().map(assembler::toModel)
                 .collect(Collectors.toList());
 
         return CollectionModel.of(employees, linkTo(methodOn(EmployeeController.class).all()).withSelfRel());
-        
+
         // return repository.findAll();
     }
 
     @PostMapping("/employees")
-    Employee newEmployee(@RequestBody Employee newEmployee) {
-        return repository.save(newEmployee);
+    ResponseEntity<?> newEmployee(@RequestBody Employee newEmployee) {
+
+        EntityModel<Employee> entityModel = assembler.toModel(repository.save(newEmployee));
+
+        return ResponseEntity.created(entityModel.getRequiredLink(IanaLinkRelations.SELF).toUri()).body(entityModel);
+        // Very unreadable code^
+        // ResponseEntity is used to create an HTTP 2001 Created status message.
+        // This response usually includes a Location header.
+        // We use the URI derived from the model's self related link
+        // return repository.save(newEmployee);
     }
 
     @GetMapping("/employees/{id}")
@@ -62,7 +71,7 @@ class EmployeeController {
     public EntityModel<Employee> one(@PathVariable Long id) throws NoSuchMethodException, SecurityException {
         Employee employee = repository.findById(id).orElseThrow(() -> new EmployeeNotFoundException(id));
 
-        //Method self = EmployeeController.class.getMethod("one", Long.class);
+        // Method self = EmployeeController.class.getMethod("one", Long.class);
 
         // Below doesnt work
         // Method self = EmployeeController.class.getEnclosingMethod();
@@ -72,8 +81,8 @@ class EmployeeController {
         // -- Had to modify the settings.json favorite static import section to include
         // -- the WebMvcLinkBuilder package.
         // return EntityModel.of(employee,
-        //         linkTo(self, id).withSelfRel(),
-        //         linkTo(methodOn(EmployeeController.class).all()).withRel("employees"));
+        // linkTo(self, id).withSelfRel(),
+        // linkTo(methodOn(EmployeeController.class).all()).withRel("employees"));
 
         /*
          * return EntityModel.of(employee,
@@ -85,12 +94,13 @@ class EmployeeController {
          * // all() and call it employees
          */
 
-         return assembler.toModel(employee);
+        return assembler.toModel(employee);
     }
 
     @PutMapping("/employees/{id}")
-    Employee replaceEmployee(@RequestBody Employee newEmployee, @PathVariable Long id) {
-        return repository.findById(id).map(employee -> {
+    ResponseEntity<?> replaceEmployee(@RequestBody Employee newEmployee, @PathVariable Long id) {
+
+        Employee updatedEmployee = repository.findById(id).map(employee -> {
             employee.setName(newEmployee.getName());
             employee.setRole(newEmployee.getRole());
             return repository.save(employee);
@@ -98,6 +108,18 @@ class EmployeeController {
             newEmployee.setId(id);
             return repository.save(newEmployee);
         });
+
+        EntityModel<Employee> entityModel = assembler.toModel(updatedEmployee);
+        return ResponseEntity.created(entityModel.getRequiredLink(IanaLinkRelations.SELF).toUri()).body(entityModel);
+
+        // return repository.findById(id).map(employee -> {
+        // employee.setName(newEmployee.getName());
+        // employee.setRole(newEmployee.getRole());
+        // return repository.save(employee);
+        // }).orElseGet(() -> {
+        // newEmployee.setId(id);
+        // return repository.save(newEmployee);
+        // });
     }
 
     @DeleteMapping("/employees/{id}")
