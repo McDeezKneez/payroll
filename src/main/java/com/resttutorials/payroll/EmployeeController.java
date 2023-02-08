@@ -40,11 +40,13 @@ class EmployeeController {
     @GetMapping("/employees")
     // CollectionModel spring hateoas container aimed at encapsulating a collection
     // of resources
-    //
     CollectionModel<EntityModel<Employee>> all() {
 
         List<EntityModel<Employee>> employees = repository.findAll().stream().map(assembler::toModel)
                 .collect(Collectors.toList());
+
+        // Above map() call is functional programming. The List is turned into a stream and we run each value
+        // through the toModel() method and then collect the values and turn it into a list.
 
         return CollectionModel.of(employees, linkTo(methodOn(EmployeeController.class).all()).withSelfRel());
 
@@ -109,7 +111,18 @@ class EmployeeController {
             return repository.save(newEmployee);
         });
 
+        // The Employee object returned by the save() is the one stored into the updatedEmployee var.
+        // This object needs to be converted into a ResponseEntity<Employee> object.
+        // First the Employee must be converted into a EntityModel, which will create all the proper
+        // Links.
         EntityModel<Employee> entityModel = assembler.toModel(updatedEmployee);
+
+        // Now that we have an EntityModel with the proper Links, we need to return a proper ResponseEntity.
+        // the created() method creates a reponse that tells us a new entry has been created. We arent really
+        // "creating" a new entity but we can use this ResponseEntity since it has the same structure.
+        // The created() method needs a URI of the entity created so we used the getRequiredLink method to
+        // grab the appropriate self link within the EntityModel and then convert it to a URI with toUri().
+        // The body() method populates the body of the newly created ResponseEntity with the entire entityModel.
         return ResponseEntity.created(entityModel.getRequiredLink(IanaLinkRelations.SELF).toUri()).body(entityModel);
 
         // return repository.findById(id).map(employee -> {
@@ -123,7 +136,8 @@ class EmployeeController {
     }
 
     @DeleteMapping("/employees/{id}")
-    void deleteEmployee(@PathVariable Long id) {
+    ResponseEntity<?> deleteEmployee(@PathVariable Long id) {
         repository.deleteById(id);
+        return ResponseEntity.noContent().build();
     }
 }
